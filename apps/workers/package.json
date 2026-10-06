@@ -1,0 +1,29 @@
+{
+  "name": "@querymedic/workers",
+  "version": "0.1.0",
+  "private": true,
+  "main": "./dist/worker.js",
+  "scripts": {
+    "build": "tsc -b",
+    "clean": "rimraf dist",
+    "dev": "tsx watch src/worker.ts",
+    "start": "node dist/worker.js",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@querymedic/database": "workspace:*",
+    "@querymedic/db-adapters": "workspace:*",
+    "@querymedic/rule-engine": "workspace:*",
+    "@querymedic/security": "workspace:*",
+    "@querymedic/ai-engine": "workspace:*",
+    "bullmq": "^5.34.10",
+    "dotenv": "^16.4.7",
+    "ioredis": "^5.4.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "vitest": "^3.0.5"
+  }
+}

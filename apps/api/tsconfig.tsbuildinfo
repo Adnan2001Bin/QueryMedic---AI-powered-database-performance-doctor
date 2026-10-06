@@ -1,0 +1,1 @@
+{"root":["./src/app.ts","./src/server.ts","./src/__tests__/mockprisma.ts","./src/modules/auth/auth.routes.ts","./src/modules/organizations/organization.routes.ts","./src/plugins/auth.ts","./src/plugins/rbac.ts","./src/queues/index.ts"],"version":"5.9.3"}

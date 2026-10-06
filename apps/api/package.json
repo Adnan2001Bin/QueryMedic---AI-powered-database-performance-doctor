@@ -1,0 +1,35 @@
+{
+  "name": "@querymedic/api",
+  "version": "0.1.0",
+  "private": true,
+  "main": "./dist/server.js",
+  "scripts": {
+    "build": "tsc -b",
+    "clean": "rimraf dist",
+    "dev": "tsx watch src/server.ts",
+    "start": "node dist/server.js",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@fastify/cors": "^10.0.1",
+    "@fastify/jwt": "^9.0.2",
+    "@fastify/sensible": "^6.0.2",
+    "fastify-plugin": "^5.0.1",
+    "@querymedic/database": "workspace:*",
+    "@querymedic/db-adapters": "workspace:*",
+    "@querymedic/rule-engine": "workspace:*",
+    "@querymedic/security": "workspace:*",
+    "@querymedic/ai-engine": "workspace:*",
+    "bullmq": "^5.34.10",
+    "dotenv": "^16.4.7",
+    "fastify": "^5.2.1",
+    "ioredis": "^5.4.2",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "vitest": "^3.0.5"
+  }
+}

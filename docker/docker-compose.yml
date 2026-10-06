@@ -1,0 +1,54 @@
+services:
+  # QueryMedic Management Database
+  querymedic-postgres:
+    image: postgres:16-alpine
+    container_name: querymedic-postgres
+    environment:
+      POSTGRES_USER: querymedic
+      POSTGRES_PASSWORD: querymedic_secret_password
+      POSTGRES_DB: querymedic_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - querymedic_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U querymedic -d querymedic_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Redis Job Queue & Cache
+  querymedic-redis:
+    image: redis:7-alpine
+    container_name: querymedic-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - querymedic_redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Monitored Target PostgreSQL Sandbox (with pg_stat_statements enabled)
+  target-sample-postgres:
+    image: postgres:16-alpine
+    container_name: target-sample-postgres
+    environment:
+      POSTGRES_USER: target_admin
+      POSTGRES_PASSWORD: target_secret_password
+      POSTGRES_DB: target_production
+    ports:
+      - "5433:5432"
+    command: >
+      postgres -c shared_preload_libraries=pg_stat_statements
+               -c pg_stat_statements.track=all
+               -c pg_stat_statements.max=10000
+    volumes:
+      - target_sample_pgdata:/var/lib/postgresql/data
+
+volumes:
+  querymedic_pgdata:
+  querymedic_redisdata:
+  target_sample_pgdata:
