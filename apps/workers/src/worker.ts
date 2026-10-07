@@ -1,83 +1,35 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
-import { Worker } from 'bullmq';
-import Redis from 'ioredis';
 import { getPrismaClient } from '@querymedic/database';
-
-const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
+import { createWorkerRedisConnection } from './config/redis.config.js';
+import {
+  createTelemetryWorker,
+  createRuleAnalysisWorker,
+  createAISynthesisWorker,
+  createBenchmarkWorker,
+  createAlertWorker,
+} from './processors/index.js';
 
 async function startWorkers() {
-  const redis = new Redis(REDIS_URL, {
-    maxRetriesPerRequest: null,
-    enableReadyCheck: false,
-  });
-
+  const redis = createWorkerRedisConnection();
   const prisma = getPrismaClient();
 
-  // Telemetry Harvesting Worker
-  const telemetryWorker = new Worker(
-    'telemetry-harvest',
-    async (job) => {
-      console.log(`[Worker] Processing telemetry harvest for db: ${job.data.databaseId}`);
-      return { success: true, processedAt: new Date().toISOString() };
-    },
-    { connection: redis, concurrency: 5 }
-  );
+  const workers = [
+    createTelemetryWorker(redis),
+    createRuleAnalysisWorker(redis),
+    createAISynthesisWorker(redis),
+    createBenchmarkWorker(redis),
+    createAlertWorker(redis),
+  ];
 
-  // Rule Analysis Worker
-  const ruleWorker = new Worker(
-    'rule-analysis',
-    async (job) => {
-      console.log(`[Worker] Evaluating rules for snapshot: ${job.data.snapshotId}`);
-      return { findingsCount: 0 };
-    },
-    { connection: redis, concurrency: 10 }
-  );
-
-  // AI Synthesis Worker
-  const aiWorker = new Worker(
-    'ai-synthesis',
-    async (job) => {
-      console.log(`[Worker] Synthesizing AI explanation for finding: ${job.data.findingId}`);
-      return { synthesized: true };
-    },
-    { connection: redis, concurrency: 3 }
-  );
-
-  // Benchmark Sandbox Worker
-  const benchmarkWorker = new Worker(
-    'benchmark-sandbox',
-    async (job) => {
-      console.log(`[Worker] Executing sandbox benchmark for recommendation: ${job.data.recommendationId}`);
-      return { status: 'VERIFIED', improvementPct: 0 };
-    },
-    { connection: redis, concurrency: 2 }
-  );
-
-  // Alert Dispatcher Worker
-  const alertWorker = new Worker(
-    'alert-dispatch',
-    async (job) => {
-      console.log(`[Worker] Dispatching alert to ${job.data.channelType}: ${job.data.destinationUrl}`);
-      return { dispatched: true };
-    },
-    { connection: redis, concurrency: 10 }
-  );
-
-  console.log('QueryMedic BullMQ worker fleet started successfully.');
+  console.log('QueryMedic BullMQ worker fleet started successfully (5 processors active).');
 
   const shutdown = async () => {
-    console.log('Shutting down workers...');
-    await Promise.all([
-      telemetryWorker.close(),
-      ruleWorker.close(),
-      aiWorker.close(),
-      benchmarkWorker.close(),
-      alertWorker.close(),
-      redis.quit(),
-      prisma.$disconnect(),
-    ]);
+    console.log('Shutting down worker fleet...');
+    await Promise.all(workers.map((w) => w.close()));
+    await redis.quit();
+    await prisma.$disconnect();
     process.exit(0);
   };
 

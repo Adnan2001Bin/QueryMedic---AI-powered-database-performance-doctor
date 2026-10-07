@@ -3,7 +3,8 @@ import fastifyCors from '@fastify/cors';
 import fastifySensible from '@fastify/sensible';
 import type { FastifyInstance } from 'fastify';
 import type { PrismaClient } from '@querymedic/database';
-import { authPlugin } from './plugins/auth.js';
+import { authPlugin } from './plugins/auth.plugin.js';
+import { healthRoutes } from './modules/health/health.routes.js';
 import { createAuthRoutes } from './modules/auth/auth.routes.js';
 import { createOrganizationRoutes } from './modules/organizations/organization.routes.js';
 import type { AppQueues } from './queues/index.js';
@@ -19,27 +20,16 @@ export async function buildApp(opts: BuildAppOptions): Promise<FastifyInstance> 
     logger: process.env.NODE_ENV === 'test' ? false : true,
   });
 
+  // Cross-Cutting Middleware
   await app.register(fastifyCors, {
     origin: true,
     credentials: true,
   });
-
   await app.register(fastifySensible);
-
-  // Authentication Plugin
   await app.register(authPlugin);
 
-  // Health Check
-  app.get('/health', async () => {
-    return {
-      status: 'healthy',
-      timestamp: new Date().toISOString(),
-      service: 'querymedic-api',
-      uptimeSec: Math.floor(process.uptime()),
-    };
-  });
-
-  // API Modules
+  // Modular Feature Routes
+  await app.register(healthRoutes, { prefix: '/health' });
   await app.register(createAuthRoutes(opts.prisma), { prefix: '/api/auth' });
   await app.register(createOrganizationRoutes(opts.prisma), { prefix: '/api/organizations' });
 
