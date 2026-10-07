@@ -1,0 +1,88 @@
+enum DatabaseEngine {
+  POSTGRESQL
+  MYSQL
+}
+
+enum ConnectionMode {
+  DIRECT
+  AGENT
+}
+
+enum ConnectionStatus {
+  ONLINE
+  OFFLINE
+  DEGRADED
+  AGENT_DISCONNECTED
+  EXTENSION_MISSING
+}
+
+model DatabaseConnection {
+  id                String             @id @default(uuid())
+  organizationId    String
+  name              String
+  engine            DatabaseEngine     @default(POSTGRESQL)
+  host              String
+  port              Int                @default(5432)
+  databaseName      String
+  username          String
+  encryptedPassword String             // AES-256-GCM
+  passwordIv        String             // Base64 IV
+  passwordTag       String             // Base64 Auth Tag
+  sslMode           String             @default("prefer")
+  connectionMode    ConnectionMode     @default(DIRECT)
+  agentToken        String?            @unique
+  status            ConnectionStatus   @default(ONLINE)
+  healthScore       Int                @default(100)
+  lastScannedAt     DateTime?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+
+  organization      Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  snapshots         DatabaseSnapshot[]
+  normalizedQueries NormalizedQuery[]
+  findings          Finding[]
+  alertConfigs      AlertConfiguration[]
+  alertEvents       AlertEvent[]
+}
+
+model DatabaseSnapshot {
+  id                   String             @id @default(uuid())
+  databaseId           String
+  totalSizeBytes       BigInt
+  cacheHitRatio        Float
+  activeConnections    Int
+  maxConnections       Int
+  longestTxDurationSec Float              @default(0)
+  createdAt            DateTime           @default(now())
+
+  database             DatabaseConnection @relation(fields: [databaseId], references: [id], onDelete: Cascade)
+  tableCatalogs        TableCatalog[]
+  indexCatalogs        IndexCatalog[]
+}
+
+model TableCatalog {
+  id             String           @id @default(uuid())
+  snapshotId     String
+  schemaName     String           @default("public")
+  tableName      String
+  liveTuples     BigInt           @default(0)
+  deadTuples     BigInt           @default(0)
+  tableSizeBytes BigInt           @default(0)
+  indexSizeBytes BigInt           @default(0)
+
+  snapshot       DatabaseSnapshot @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
+}
+
+model IndexCatalog {
+  id             String           @id @default(uuid())
+  snapshotId     String
+  schemaName     String           @default("public")
+  tableName      String
+  indexName      String
+  columns        String[]
+  isUnique       Boolean          @default(false)
+  indexSizeBytes BigInt           @default(0)
+  idxScanCount   BigInt           @default(0)
+
+  snapshot       DatabaseSnapshot @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
+}

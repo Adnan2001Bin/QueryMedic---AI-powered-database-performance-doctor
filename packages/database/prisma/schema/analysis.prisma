@@ -1,0 +1,95 @@
+enum FindingSeverity {
+  CRITICAL
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum FindingStatus {
+  DETECTED
+  RESOLVED
+  MUTED
+}
+
+enum RecommendationStatus {
+  DETECTED
+  ANALYZED
+  RECOMMENDED
+  TESTING
+  VERIFIED
+  APPROVED
+  APPLIED
+  REJECTED
+}
+
+enum RiskLevel {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum RemediationType {
+  CREATE_INDEX
+  DROP_INDEX
+  REWRITE_QUERY
+  VACUUM
+  CONFIG_CHANGE
+}
+
+model Finding {
+  id                    String             @id @default(uuid())
+  databaseId            String
+  queryId               String?
+  ruleCode              String             // e.g. RULE-SCAN-01, RULE-IDX-01
+  findingType           String             // SEQUENTIAL_SCAN, MISSING_INDEX, etc.
+  severity              FindingSeverity    @default(MEDIUM)
+  status                FindingStatus      @default(DETECTED)
+  deterministicEvidence Json               // Structured facts from AST & plan
+  createdAt             DateTime           @default(now())
+  resolvedAt            DateTime?
+
+  database              DatabaseConnection @relation(fields: [databaseId], references: [id], onDelete: Cascade)
+  query                 NormalizedQuery?   @relation(fields: [queryId], references: [id], onDelete: SetNull)
+  recommendation        Recommendation?
+}
+
+model Recommendation {
+  id               String                    @id @default(uuid())
+  findingId        String                    @unique
+  title            String
+  rootCause        String
+  explanation      String
+  remediationType  RemediationType           @default(CREATE_INDEX)
+  recommendedSql   String
+  riskLevel        RiskLevel                 @default(LOW)
+  riskExplanation  String
+  estimatedMinPct  Float                     @default(0)
+  estimatedMaxPct  Float                     @default(0)
+  verifiedPct      Float?
+  status           RecommendationStatus      @default(RECOMMENDED)
+  approvedByUserId String?
+  appliedAt        DateTime?
+  rejectionReason  String?
+  createdAt        DateTime                  @default(now())
+  updatedAt        DateTime                  @updatedAt
+
+  finding          Finding                   @relation(fields: [findingId], references: [id], onDelete: Cascade)
+  approvedBy       User?                     @relation(fields: [approvedByUserId], references: [id], onDelete: SetNull)
+  benchmarks       RecommendationBenchmark[]
+}
+
+model RecommendationBenchmark {
+  id                  String         @id @default(uuid())
+  recommendationId    String
+  environmentType     String         @default("SANDBOX")
+  baselineLatencyMs   Float
+  baselinePlanSummary String
+  testLatencyMs       Float
+  testPlanSummary     String
+  improvementPct      Float
+  baselinePlanJson    Json
+  testPlanJson        Json
+  executedAt          DateTime       @default(now())
+
+  recommendation      Recommendation @relation(fields: [recommendationId], references: [id], onDelete: Cascade)
+}

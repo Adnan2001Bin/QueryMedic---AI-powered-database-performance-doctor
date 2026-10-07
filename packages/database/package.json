@@ -5,9 +5,12 @@
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "scripts": {
-    "generate": "prisma generate",
+    "generate": "prisma generate --schema prisma/schema",
     "build": "tsc -b",
     "clean": "rimraf dist"
+  },
+  "prisma": {
+    "schema": "prisma/schema"
   },
   "dependencies": {
     "@prisma/client": "^6.2.0"

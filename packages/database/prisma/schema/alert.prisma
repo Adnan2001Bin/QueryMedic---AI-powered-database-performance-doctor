@@ -1,0 +1,39 @@
+model AlertConfiguration {
+  id             String             @id @default(uuid())
+  databaseId     String
+  channelType    String             // SLACK, DISCORD, WEBHOOK, EMAIL
+  destinationUrl String
+  minSeverity    FindingSeverity    @default(HIGH)
+  isEnabled      Boolean            @default(true)
+  createdAt      DateTime           @default(now())
+
+  database       DatabaseConnection @relation(fields: [databaseId], references: [id], onDelete: Cascade)
+}
+
+model AlertEvent {
+  id             String             @id @default(uuid())
+  databaseId     String
+  alertType      String             // LATENCY_REGRESSION, CONNECTION_POOL_SATURATION
+  severity       FindingSeverity
+  summary        String
+  payload        Json
+  dispatchedAt   DateTime           @default(now())
+  deliveryStatus String             @default("SENT")
+
+  database       DatabaseConnection @relation(fields: [databaseId], references: [id], onDelete: Cascade)
+}
+
+model AuditLog {
+  id             String        @id @default(uuid())
+  organizationId String
+  userId         String?
+  actionType     String        // APPLY_INDEX, REJECT_RECOMMENDATION, CONNECT_DATABASE, etc.
+  targetEntity   String
+  targetId       String?
+  metadata       Json?
+  ipAddress      String?
+  createdAt      DateTime      @default(now())
+
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user           User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+}

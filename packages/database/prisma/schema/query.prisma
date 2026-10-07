@@ -1,0 +1,32 @@
+model NormalizedQuery {
+  id               String             @id @default(uuid())
+  databaseId       String
+  queryFingerprint String             // Deterministic SHA-256
+  normalizedSql    String             // Parameters replaced with $1, $2 or ?
+  mainTable        String?
+  statementType    String             @default("SELECT")
+  firstSeenAt      DateTime           @default(now())
+  lastSeenAt       DateTime           @default(now())
+
+  database         DatabaseConnection @relation(fields: [databaseId], references: [id], onDelete: Cascade)
+  metrics          QueryMetric[]
+  findings         Finding[]
+
+  @@unique([databaseId, queryFingerprint])
+}
+
+model QueryMetric {
+  id              String          @id @default(uuid())
+  queryId         String
+  calls           BigInt          @default(0)
+  totalExecTimeMs Float           @default(0)
+  meanExecTimeMs  Float           @default(0)
+  p95ExecTimeMs   Float           @default(0)
+  rowsProcessed   BigInt          @default(0)
+  sharedBlksHit   BigInt          @default(0)
+  sharedBlksRead  BigInt          @default(0)
+  impactScore     Float           @default(0)
+  snapshotAt      DateTime        @default(now())
+
+  query           NormalizedQuery @relation(fields: [queryId], references: [id], onDelete: Cascade)
+}
